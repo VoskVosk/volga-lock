@@ -3,309 +3,145 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#151210">
+<meta name="theme-color" content="#102a2b">
+<meta name="description" content="Управление BLE-замком водительской двери ГАЗ-21">
 <title>Волга · замок</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
-/* Приборная панель: бакелит, слоновая кость, хром. Один экран, большие кнопки под палец. */
 :root{
-  --bg:#151210; --panel:#1E1A17; --panel2:#262119; --line:#3A3229; --ivory:#EDE3CF; --muted:#A99D88;
-  --chrome:#B9BEC2; --open:#5BC27F; --open-ink:#0D2416; --close:#E2A13B; --close-ink:#2E1C03;
-  --lamp-red:#E5533F; --lamp-amber:#F0B13C; --lamp-green:#59C47E; --off:#3B342C;
-  --font:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;
-  --mono:ui-monospace,"Roboto Mono",Menlo,Consolas,monospace;
+  --petrol:#102a2b;--petrol-deep:#071a1b;--petrol-soft:#193b3b;
+  --ivory:#f2ead8;--ivory-2:#ddd0b5;--ink:#172322;--muted:#9faeaa;
+  --chrome:#d8d9d3;--chrome-dark:#78827f;--gold:#d2a854;--gold-dark:#7c602d;
+  --green:#65c78d;--amber:#e8ad4a;--red:#e36e58;--off:#425553;
+  --panel:rgba(8,27,28,.88);--line:rgba(220,222,211,.19);
+  --shadow:0 24px 70px rgba(0,0,0,.35);
+  --font:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--ivory);font-family:var(--font);font-size:16px;line-height:1.4;
-  padding:env(safe-area-inset-top,0) max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0) max(16px,env(safe-area-inset-left,0px))}
-.app{max-width:480px;margin:0 auto;padding-block:16px 24px;display:grid;gap:14px}
+html{min-height:100%;background:var(--petrol-deep)}
+body{min-height:100%;margin:0;color:var(--ivory);font-family:var(--font);font-size:16px;line-height:1.4;background:
+  radial-gradient(circle at 15% -5%,rgba(73,139,133,.32),transparent 32rem),
+  radial-gradient(circle at 110% 30%,rgba(210,168,84,.13),transparent 26rem),
+  linear-gradient(155deg,var(--petrol) 0%,var(--petrol-deep) 72%);padding:env(safe-area-inset-top,0) max(14px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0) max(14px,env(safe-area-inset-left,0px))}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.19;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.14'/%3E%3C/svg%3E")}
 button{font:inherit;color:inherit;cursor:pointer}
-:focus-visible{outline:2px solid var(--chrome);outline-offset:2px}
-
-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.title{display:grid;gap:2px}
-.title b{font-size:20px;letter-spacing:.14em;text-transform:uppercase}
-.title small{color:var(--muted);font-size:12px;letter-spacing:.12em;text-transform:uppercase}
-.conn{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:8px 14px 8px 12px;font-size:14px;white-space:nowrap}
-.dot{width:10px;height:10px;border-radius:50%;background:var(--off);flex:none}
-.conn[data-s="on"] .dot{background:var(--lamp-green);box-shadow:0 0 10px var(--lamp-green)}
-.conn[data-s="wait"] .dot{background:var(--lamp-amber);animation:blink 1s infinite}
-@keyframes blink{50%{opacity:.25}}
-
-.state{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:4px;text-align:center}
-.state small{color:var(--muted);font-size:12px;letter-spacing:.12em;text-transform:uppercase}
-.state b{font-size:26px;letter-spacing:.04em}
-.state span{color:var(--muted);font-size:14px;min-height:20px}
-
-.keys{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.key{border:0;border-radius:20px;min-height:132px;display:grid;place-items:center;gap:6px;padding:16px;font-weight:700;font-size:20px;letter-spacing:.1em;text-transform:uppercase;transition:transform .08s,filter .2s}
-.key svg{width:40px;height:40px}
-.key.open{background:var(--open);color:var(--open-ink)}
-.key.close{background:var(--close);color:var(--close-ink)}
-.key:active{transform:scale(.97)}
-.key:disabled{filter:grayscale(1) brightness(.45);cursor:not-allowed}
-.key.busy{animation:pulse .6s infinite alternate}
-@keyframes pulse{to{filter:brightness(1.25)}}
-
-.dash{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px 12px}
-.gauge{grid-column:1/-1;display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px;align-items:center}
-.gauge svg{width:150px;height:96px}
-.big{font-family:var(--mono);font-size:32px;font-weight:700;font-variant-numeric:tabular-nums}
-.sub{color:var(--muted);font-size:13px}
-.cell{background:var(--panel2);border-radius:12px;padding:12px;display:grid;gap:2px}
-.cell small{color:var(--muted);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
-.cell b{font-family:var(--mono);font-size:20px;font-variant-numeric:tabular-nums}
-.lamps{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.lamp{display:flex;align-items:center;gap:10px;background:var(--panel2);border-radius:12px;padding:12px;font-size:14px}
-.lamp i{width:14px;height:14px;border-radius:50%;background:var(--off);flex:none}
-.lamp.red i{background:var(--lamp-red);box-shadow:0 0 10px var(--lamp-red)}
-.lamp.amber i{background:var(--lamp-amber);box-shadow:0 0 10px var(--lamp-amber)}
-.lamp.green i{background:var(--lamp-green);box-shadow:0 0 10px var(--lamp-green)}
-
-.log{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 16px}
-.log h2{margin:0 0 6px;font-size:12px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:600}
-.log ul{list-style:none;margin:0;padding:0;display:grid}
-.log li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
-.log li:first-child{border-top:0}
-.log time{color:var(--muted);font-family:var(--mono);font-variant-numeric:tabular-nums}
-.log .empty{color:var(--muted)}
-
-.note{background:#3A2A12;color:#F6DDB0;border-radius:12px;padding:12px 14px;font-size:14px}
-.foot{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:13px}
-.foot button{background:none;border:0;color:var(--muted);text-decoration:underline;padding:4px 0}
-.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ivory);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.app{position:relative;max-width:520px;margin:0 auto;padding:18px 0 34px;display:grid;gap:14px}
+.brandbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 3px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}.badge{width:47px;height:47px;flex:none;display:grid;place-items:center;border:1px solid rgba(255,255,255,.24);border-radius:50%;color:var(--gold);background:linear-gradient(145deg,rgba(255,255,255,.1),rgba(255,255,255,.015));box-shadow:inset 0 0 0 3px rgba(0,0,0,.12)}
+.badge svg{width:30px}.title{display:grid;line-height:1.08}.title b{font-family:Georgia,"Times New Roman",serif;font-size:27px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;text-shadow:0 2px 10px rgba(0,0,0,.4)}.title small{margin-top:5px;color:var(--muted);font-size:10px;letter-spacing:.18em;text-transform:uppercase}
+.conn{min-height:44px;display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:rgba(5,20,20,.58);border-radius:999px;padding:9px 13px;font-size:13px;font-weight:650;white-space:nowrap;box-shadow:inset 0 1px rgba(255,255,255,.05)}
+.dot{position:relative;width:9px;height:9px;border-radius:50%;background:var(--off);flex:none}.dot:after{content:"";position:absolute;inset:-5px;border:1px solid transparent;border-radius:50%}.conn[data-s="on"] .dot{background:var(--green);box-shadow:0 0 12px var(--green)}.conn[data-s="wait"] .dot{background:var(--amber);box-shadow:0 0 10px var(--amber)}.conn[data-s="wait"] .dot:after{border-color:var(--amber);animation:radiate 1.4s infinite}
+@keyframes radiate{to{transform:scale(1.55);opacity:0}}
+.chrome-card{position:relative;border:1px solid var(--line);background:linear-gradient(160deg,rgba(28,63,62,.72),rgba(4,19,20,.9));border-radius:25px;box-shadow:var(--shadow),inset 0 1px rgba(255,255,255,.08);overflow:hidden}.chrome-card:before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(120deg,rgba(255,255,255,.055),transparent 28%,transparent 75%,rgba(210,168,84,.035))}
+.hero{padding:22px 20px 19px;text-align:center;display:grid;justify-items:center}.eyebrow{position:relative;color:var(--ivory-2);font-size:10px;font-weight:750;letter-spacing:.2em;text-transform:uppercase}.eyebrow:before,.eyebrow:after{content:"";display:inline-block;width:36px;height:1px;margin:0 10px 3px;background:linear-gradient(90deg,transparent,var(--gold))}.eyebrow:after{transform:rotate(180deg)}
+.hero-main{margin:8px 0 1px;font-family:Georgia,"Times New Roman",serif;font-size:34px;font-weight:500;letter-spacing:.02em}.hero-sub{min-height:20px;color:var(--muted);font-size:13px}.ornament{width:70px;height:9px;margin-top:11px;color:var(--gold);opacity:.78}
+.note{border:1px solid rgba(232,173,74,.38);background:rgba(72,48,15,.78);color:#ffe8b7;border-radius:17px;padding:13px 15px;font-size:13px}
+.keys{display:grid;grid-template-columns:1fr 1fr;gap:12px}.key{position:relative;min-height:156px;border:1px solid rgba(255,255,255,.28);border-radius:25px;padding:17px 12px 15px;display:grid;align-content:center;justify-items:center;gap:8px;overflow:hidden;font-weight:800;letter-spacing:.1em;text-transform:uppercase;transition:transform .12s,filter .2s,box-shadow .2s}.key:before{content:"";position:absolute;inset:5px;border:1px solid rgba(0,0,0,.19);border-radius:20px;pointer-events:none}.key:after{content:"";position:absolute;left:14%;right:14%;top:8px;height:30%;border-radius:50%;background:linear-gradient(rgba(255,255,255,.22),transparent);pointer-events:none}.key svg{position:relative;width:45px;height:45px}.key strong{position:relative;font-size:18px}.key small{position:relative;font-size:10px;letter-spacing:.08em;opacity:.63}.key.open{color:#0d2a21;background:linear-gradient(155deg,#9bd0ae,#56aa78);box-shadow:0 15px 34px rgba(50,154,96,.2),inset 0 1px rgba(255,255,255,.6)}.key.close{color:#35240c;background:linear-gradient(155deg,#ebca78,#c69135);box-shadow:0 15px 34px rgba(195,132,36,.18),inset 0 1px rgba(255,255,255,.62)}.key:active{transform:translateY(2px) scale(.98)}.key:disabled{filter:saturate(.1) brightness(.52);box-shadow:none;cursor:not-allowed}.key.busy{animation:keypulse .65s infinite alternate}@keyframes keypulse{to{filter:brightness(1.18);transform:translateY(-2px)}}
+.cluster{padding:17px}.cluster-head{position:relative;display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}.cluster-head h2,.log h2{margin:0;font-size:10px;color:var(--ivory-2);letter-spacing:.2em;text-transform:uppercase}.cluster-head span{color:var(--gold);font:10px var(--mono);letter-spacing:.08em}.gauge{min-height:168px;display:grid;place-items:center;position:relative;background:radial-gradient(circle,rgba(239,231,211,.075),transparent 67%)}.gauge svg{width:min(100%,325px);height:auto}.gauge-value{position:absolute;top:61px;display:grid;text-align:center}.gauge-value .big{font:700 33px var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.05em}.gauge-value .sub{color:var(--muted);font-size:12px}.instruments{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cell{min-height:87px;padding:14px;border:1px solid rgba(255,255,255,.075);border-radius:16px;background:rgba(0,0,0,.17);display:grid;align-content:center;gap:3px}.cell small{color:var(--muted);font-size:9px;font-weight:750;letter-spacing:.15em;text-transform:uppercase}.cell b{font:700 19px var(--mono);font-variant-numeric:tabular-nums}.lamps{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.lamp{min-height:49px;display:flex;align-items:center;gap:10px;border:1px solid rgba(255,255,255,.075);background:rgba(0,0,0,.18);border-radius:15px;padding:10px 12px;font-size:12px;color:var(--muted)}.lamp i{width:13px;height:13px;border:2px solid rgba(255,255,255,.12);border-radius:50%;background:var(--off);box-shadow:inset 0 0 5px rgba(0,0,0,.5);flex:none}.lamp.red i{background:var(--red);box-shadow:0 0 11px var(--red)}.lamp.amber i{background:var(--amber);box-shadow:0 0 11px var(--amber)}.lamp.green i{background:var(--green);box-shadow:0 0 11px var(--green)}.lamp.green,.lamp.amber,.lamp.red{color:var(--ivory)}
+.log{padding:16px 17px}.log-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}.log-head span{color:var(--muted);font-size:10px}.log ul{list-style:none;margin:0;padding:0;display:grid}.log li{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;min-height:43px;border-top:1px solid rgba(255,255,255,.075);font-size:13px}.log li:first-child{border-top:0}.log time{color:var(--muted);font:10px var(--mono);font-variant-numeric:tabular-nums}.log .empty{color:var(--muted)}
+.foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 5px;color:var(--muted);font-size:11px}.foot button{min-height:38px;border:0;background:none;color:var(--ivory-2);padding:5px 7px;text-decoration:underline;text-underline-offset:4px}.toast{position:fixed;z-index:5;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(24px);background:var(--ivory);color:var(--ink);padding:12px 18px;border:1px solid white;border-radius:14px;box-shadow:0 16px 45px rgba(0,0,0,.4);font-weight:750;opacity:0;transition:.25s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(max-width:370px){.title b{font-size:23px}.title small{font-size:8px}.conn{padding-inline:10px}.key{min-height:142px}.hero-main{font-size:30px}.gauge svg{width:290px}}
+@media(min-width:760px){.app{padding-top:28px}.keys{gap:16px}.key{min-height:168px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-<div class="app">
-  <header>
-    <div class="title"><b>Волга</b><small>ГАЗ-21 · водительская дверь</small></div>
-    <button class="conn" id="connBtn" data-s="off"><span class="dot"></span><span id="connText">Подключить</span></button>
+<main class="app">
+  <header class="brandbar">
+    <div class="brand">
+      <div class="badge" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><path d="M10 39h44M16 39l5-15h22l6 15M22 24l6-8h8l7 8M18 39v7m28-7v7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="20" cy="43" r="4" fill="currentColor"/><circle cx="44" cy="43" r="4" fill="currentColor"/></svg></div>
+      <div class="title"><b>Волга</b><small>ГАЗ-21 · водительская дверь</small></div>
+    </div>
+    <button class="conn" id="connBtn" data-s="off" type="button" aria-label="Подключиться к замку"><span class="dot"></span><span id="connText">Подключить</span></button>
   </header>
 
-  <div class="note" id="noBt" hidden>Этот браузер не умеет работать с Bluetooth. Откройте страницу в Chrome на Android. Чтобы посмотреть, как всё выглядит, включите демо внизу.</div>
+  <div class="note" id="noBt" hidden>В этом браузере нет Web Bluetooth. Откройте приложение в Chrome на Android или включите демонстрационный режим внизу.</div>
 
-  <section class="state" aria-live="polite">
-    <small>Последнее действие</small>
-    <b id="stateMain">—</b>
-    <span id="stateSub">Нажмите «Подключить» рядом с машиной</span>
+  <section class="hero chrome-card" aria-live="polite">
+    <div class="eyebrow">Последнее действие</div>
+    <div class="hero-main" id="stateMain">Готов к поездке</div>
+    <div class="hero-sub" id="stateSub">Подключитесь рядом с автомобилем</div>
+    <svg class="ornament" viewBox="0 0 100 12" fill="none" aria-hidden="true"><path d="M1 6h32l7-5 10 10L60 1l7 5h32" stroke="currentColor"/></svg>
   </section>
 
-  <div class="keys">
-    <button class="key open" id="openBtn" disabled>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
-      Открыть
+  <section class="keys" aria-label="Управление замком">
+    <button class="key open" id="openBtn" type="button" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="3"/><path d="M8 10.5V7.3a4.2 4.2 0 0 1 7.9-2"/><circle cx="12" cy="15.3" r="1.2" fill="currentColor" stroke="none"/></svg>
+      <strong>Открыть</strong><small>водительскую дверь</small>
     </button>
-    <button class="key close" id="closeBtn" disabled>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-      Закрыть
+    <button class="key close" id="closeBtn" type="button" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="3"/><path d="M8 10.5V7.3a4 4 0 0 1 8 0v3.2"/><circle cx="12" cy="15.3" r="1.2" fill="currentColor" stroke="none"/></svg>
+      <strong>Закрыть</strong><small>водительскую дверь</small>
     </button>
-  </div>
+  </section>
 
-  <section class="dash" aria-label="Приборы">
+  <section class="cluster chrome-card" aria-label="Состояние автомобиля">
+    <div class="cluster-head"><h2>Приборы</h2><span>VOLGA · BLE</span></div>
     <div class="gauge">
-      <svg viewBox="0 0 150 96" aria-hidden="true">
-        <path d="M15 86 A60 60 0 0 1 135 86" fill="none" stroke="#3A3229" stroke-width="12" stroke-linecap="round"/>
-        <path id="arc" d="M15 86 A60 60 0 0 1 135 86" fill="none" stroke="#B9BEC2" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100"/>
-        <text x="15" y="96" fill="#A99D88" font-size="9" text-anchor="middle" font-family="monospace">10</text>
-        <text x="135" y="96" fill="#A99D88" font-size="9" text-anchor="middle" font-family="monospace">14,6</text>
+      <svg viewBox="0 0 330 170" aria-hidden="true">
+        <defs><linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#faf8ef"/><stop offset=".35" stop-color="#858f8b"/><stop offset=".7" stop-color="#e8e6dc"/><stop offset="1" stop-color="#68726f"/></linearGradient></defs>
+        <path d="M36 145 A129 129 0 0 1 294 145" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="22" stroke-linecap="round"/>
+        <path d="M36 145 A129 129 0 0 1 294 145" fill="none" stroke="url(#metal)" stroke-width="15" stroke-linecap="round"/>
+        <path d="M36 145 A129 129 0 0 1 294 145" fill="none" stroke="#314846" stroke-width="9" stroke-linecap="round"/>
+        <path id="arc" d="M36 145 A129 129 0 0 1 294 145" fill="none" stroke="#65c78d" stroke-width="9" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100"/>
+        <g stroke="#d8d1bf" stroke-width="2"><path d="M36 145l10-3"/><path d="M54 86l9 5"/><path d="M99 42l5 9"/><path d="M165 26v11"/><path d="M231 42l-5 9"/><path d="M276 86l-9 5"/><path d="M294 145l-10-3"/></g>
+        <text x="34" y="166" fill="#9faeaa" font-size="10">10</text><text x="283" y="166" fill="#9faeaa" font-size="10">14,6</text><text x="165" y="57" fill="#d2a854" font-size="9" text-anchor="middle" letter-spacing="2">БАТАРЕЯ</text>
       </svg>
-      <div>
-        <div class="sub">Батарея замка</div>
-        <div class="big" id="vbat">—</div>
-        <div class="sub" id="vbatPct">нет данных</div>
-      </div>
+      <div class="gauge-value"><div class="big" id="vbat">—</div><div class="sub" id="vbatPct">нет данных</div></div>
     </div>
-    <div class="cell"><small>Температура</small><b id="temp">—</b></div>
-    <div class="cell"><small>Бортсеть</small><b id="vign">—</b></div>
+    <div class="instruments">
+      <div class="cell"><small>Температура батареи</small><b id="temp">—</b></div>
+      <div class="cell"><small>Бортовая сеть</small><b id="vign">—</b></div>
+    </div>
     <div class="lamps">
       <div class="lamp" id="lampEng"><i></i><span>Двигатель</span></div>
       <div class="lamp" id="lampChg"><i></i><span>Зарядка</span></div>
     </div>
   </section>
 
-  <section class="log">
-    <h2>Журнал</h2>
-    <ul id="log"><li class="empty">Пока пусто</li></ul>
+  <section class="log chrome-card">
+    <div class="log-head"><h2>Журнал действий</h2><span>на этом устройстве</span></div>
+    <ul id="log"><li class="empty">Действий пока нет</li></ul>
   </section>
 
-  <div class="foot"><span id="ver">Volga-Lock · BLE</span><button id="demoBtn">Демо</button></div>
-</div>
-<div class="toast" id="toast" role="status"></div>
-
+  <footer class="foot"><span id="ver">Volga-Lock · защищённый BLE</span><button id="demoBtn" type="button">Демо-режим</button></footer>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
 const SVC = '6b1f0001-3c2a-4e8b-9a6d-5f0e2c7a1d01';
 const CMD = '6b1f0002-3c2a-4e8b-9a6d-5f0e2c7a1d01';
 const STA = '6b1f0003-3c2a-4e8b-9a6d-5f0e2c7a1d01';
 const ENGINE_V = 13.5;
 const $ = id => document.getElementById(id);
-
 let device = null, cmdChar = null, staChar = null, demo = false, busy = false, wantConnected = false, retryTimer = null, retryN = 0;
-
 /* --- журнал (только в этом браузере) --- */
 let log = [];
 try { log = JSON.parse(localStorage.getItem('volga-log')) || []; } catch (e) {}
 const fmtTime = d => d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 const fmtDay = d => { const t = new Date(); return d.toDateString() === t.toDateString() ? 'сегодня' : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }); };
-function addLog(text) {
-  log.unshift({ t: Date.now(), text }); log = log.slice(0, 15);
-  try { localStorage.setItem('volga-log', JSON.stringify(log)); } catch (e) {}
-  renderLog();
-}
-function renderLog() {
-  $('log').innerHTML = log.length ? log.map(e => { const d = new Date(e.t); return `<li><span>${e.text}</span><time>${fmtDay(d)} ${fmtTime(d)}</time></li>`; }).join('') : '<li class="empty">Пока пусто</li>';
-  if (log.length) { const d = new Date(log[0].t); $('stateMain').textContent = log[0].text; $('stateSub').textContent = `${fmtDay(d)} в ${fmtTime(d)}`; }
-}
-
-function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2200); }
+function addLog(text) { log.unshift({ t: Date.now(), text }); log = log.slice(0, 15); try { localStorage.setItem('volga-log', JSON.stringify(log)); } catch (e) {} renderLog(); }
+function renderLog() { $('log').innerHTML = log.length ? log.map(e => { const d = new Date(e.t); return `<li><span>${e.text}</span><time>${fmtDay(d)} · ${fmtTime(d)}</time></li>`; }).join('') : '<li class="empty">Действий пока нет</li>'; if (log.length) { const d = new Date(log[0].t); $('stateMain').textContent = log[0].text; $('stateSub').textContent = `${fmtDay(d)} в ${fmtTime(d)}`; } }
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2400); }
 const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
-
-function setConn(state, text) {
-  $('connBtn').dataset.s = state; $('connText').textContent = text;
-  const on = state === 'on';
-  $('openBtn').disabled = !on; $('closeBtn').disabled = !on;
-}
-
-/* --- приборы --- */
-const SOC = [[13.6, 100], [13.4, 99], [13.3, 90], [13.2, 70], [13.1, 40], [13.0, 30], [12.9, 20], [12.8, 17], [12.0, 9], [10.0, 0]];
-function soc(v) {
-  if (v >= SOC[0][0]) return 100; if (v <= SOC[SOC.length - 1][0]) return 0;
-  for (let i = 0; i < SOC.length - 1; i++) { const [v1, p1] = SOC[i], [v2, p2] = SOC[i + 1]; if (v <= v1 && v >= v2) return Math.round(p2 + (p1 - p2) * (v - v2) / (v1 - v2)); }
-  return 0;
-}
-function showStatus(vbat, vign, temp, chg) {
-  const engine = vign >= ENGINE_V;
-  $('vbat').textContent = vbat.toFixed(2).replace('.', ',') + ' В';
-  $('vbatPct').textContent = chg ? 'заряжается' : (engine ? 'идёт поездка' : '≈ ' + soc(vbat) + ' %');
-  const frac = Math.max(0, Math.min(1, (vbat - 10) / 4.6));
-  $('arc').setAttribute('stroke-dasharray', `${frac * 100} 100`);
-  $('arc').setAttribute('stroke', vbat < 12.4 ? '#E5533F' : vbat < 12.9 ? '#F0B13C' : '#59C47E');
-  $('vign').textContent = vign < 1 ? 'выкл' : vign.toFixed(1).replace('.', ',') + ' В';
-  $('temp').textContent = isNaN(temp) ? 'нет датчика' : (temp > 0 ? '+' : '') + temp.toFixed(1).replace('.', ',') + ' °C';
-  $('lampEng').className = 'lamp' + (engine ? ' green' : vign >= 1 ? ' amber' : '');
-  $('lampEng').querySelector('span').textContent = engine ? 'Двигатель работает' : vign >= 1 ? 'Зажигание' : 'Двигатель';
-  $('lampChg').className = 'lamp' + (chg ? ' amber' : '');
-}
-function onStatus(e) {
-  const txt = new TextDecoder().decode(e.target ? e.target.value : e);
-  const p = txt.split(';');
-  if (p.length < 4) return;
-  showStatus(parseFloat(p[0]), parseFloat(p[1]), parseFloat(p[2]), p[3].trim() === '1');
-}
-
+function setConn(state, text) { $('connBtn').dataset.s = state; $('connText').textContent = text; $('connBtn').setAttribute('aria-label', text); $('connBtn').setAttribute('aria-busy', state === 'wait'); const on = state === 'on'; $('openBtn').disabled = !on || busy; $('closeBtn').disabled = !on || busy; }
+const SOC = [[13.6,100],[13.4,99],[13.3,90],[13.2,70],[13.1,40],[13.0,30],[12.9,20],[12.8,17],[12.0,9],[10.0,0]];
+function soc(v) { if (v >= SOC[0][0]) return 100; if (v <= SOC[SOC.length-1][0]) return 0; for (let i=0;i<SOC.length-1;i++) { const [v1,p1]=SOC[i],[v2,p2]=SOC[i+1]; if(v<=v1&&v>=v2)return Math.round(p2+(p1-p2)*(v-v2)/(v1-v2)); } return 0; }
+function showStatus(vbat,vign,temp,chg) { const engine=vign>=ENGINE_V; $('vbat').textContent=vbat.toFixed(2).replace('.',',')+' В'; $('vbatPct').textContent=chg?'заряжается':(engine?'идёт поездка':'≈ '+soc(vbat)+' %'); const frac=Math.max(0,Math.min(1,(vbat-10)/4.6)); $('arc').setAttribute('stroke-dasharray',`${frac*100} 100`); $('arc').setAttribute('stroke',vbat<12.4?'#e36e58':vbat<12.9?'#e8ad4a':'#65c78d'); $('vign').textContent=vign<1?'выкл':vign.toFixed(1).replace('.',',')+' В'; $('temp').textContent=isNaN(temp)?'нет датчика':(temp>0?'+':'')+temp.toFixed(1).replace('.',',')+' °C'; $('lampEng').className='lamp'+(engine?' green':vign>=1?' amber':''); $('lampEng').querySelector('span').textContent=engine?'Двигатель работает':vign>=1?'Зажигание':'Двигатель'; $('lampChg').className='lamp'+(chg?' amber':''); $('lampChg').querySelector('span').textContent=chg?'Идёт зарядка':'Зарядка'; }
+function onStatus(e) { const txt=new TextDecoder().decode(e.target?e.target.value:e); const p=txt.split(';'); if(p.length<4)return; showStatus(parseFloat(p[0]),parseFloat(p[1]),parseFloat(p[2]),p[3].trim()==='1'); }
 /* --- Bluetooth --- */
-async function attach(dev) {
-  device = dev;
-  device.removeEventListener('gattserverdisconnected', onDisconnect);
-  device.addEventListener('gattserverdisconnected', onDisconnect);
-  setConn('wait', 'Подключение…');
-  const server = await device.gatt.connect();
-  const svc = await server.getPrimaryService(SVC);
-  cmdChar = await svc.getCharacteristic(CMD);
-  staChar = await svc.getCharacteristic(STA);
-  staChar.removeEventListener('characteristicvaluechanged', onStatus);
-  staChar.addEventListener('characteristicvaluechanged', onStatus);
-  await staChar.startNotifications();
-  try { onStatus(await staChar.readValue()); } catch (e) {}
-  retryN = 0; wantConnected = true;
-  setConn('on', 'На связи');
-  $('stateSub').textContent = log.length ? $('stateSub').textContent : 'Можно открывать';
-}
-async function connect() {
-  if (demo) return;
-  if (!navigator.bluetooth) { toast('Нужен Chrome на Android'); return; }
-  try {
-    const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [SVC] }] });
-    await attach(dev);
-  } catch (e) {
-    if (e.name === 'NotFoundError') { setConn('off', 'Подключить'); return; }
-    failed(e);
-  }
-}
-function failed(e) {
-  console.warn(e);
-  const msg = String(e && e.message || e);
-  if (/auth|encrypt|insufficient/i.test(msg)) toast('Телефон не привязан: нажмите кнопку на блоке и подключитесь снова');
-  else toast('Не удалось подключиться: ' + (e.name || 'ошибка'));
-  setConn('off', 'Подключить');
-  scheduleRetry();
-}
-function onDisconnect() {
-  cmdChar = staChar = null;
-  setConn('wait', 'Нет связи…');
-  scheduleRetry();
-}
-function scheduleRetry() {
-  if (!wantConnected || !device || demo) return;
-  clearTimeout(retryTimer);
-  const wait = [2000, 4000, 8000, 15000][Math.min(retryN, 3)]; retryN++;
-  retryTimer = setTimeout(async () => {
-    if (document.hidden) return;
-    try { await attach(device); } catch (e) { setConn('wait', 'Ищу машину…'); scheduleRetry(); }
-  }, wait);
-}
-async function autoConnect() {
-  if (!navigator.bluetooth || !navigator.bluetooth.getDevices) return;
-  try {
-    const list = await navigator.bluetooth.getDevices();
-    const dev = list.find(d => (d.name || '').startsWith('Volga'));
-    if (!dev) return;
-    wantConnected = true; device = dev;
-    setConn('wait', 'Ищу машину…');
-    try { await attach(dev); } catch (e) { scheduleRetry(); }
-  } catch (e) {}
-}
-
-async function send(ch, label) {
-  if (busy) return;
-  const btn = ch === 'o' ? $('openBtn') : $('closeBtn');
-  busy = true; btn.classList.add('busy'); buzz(20);
-  try {
-    if (demo) await new Promise(r => setTimeout(r, 400));
-    else await cmdChar.writeValueWithResponse(new TextEncoder().encode(ch));
-    buzz([30, 60, 30]);
-    addLog(label); toast(label);
-  } catch (e) {
-    failed(e);
-  } finally {
-    setTimeout(() => { busy = false; btn.classList.remove('busy'); }, 900);
-  }
-}
-
-/* --- демо без машины --- */
-let demoTimer = null;
-function toggleDemo() {
-  demo = !demo;
-  $('demoBtn').textContent = demo ? 'Выключить демо' : 'Демо';
-  clearInterval(demoTimer);
-  if (demo) {
-    setConn('on', 'Демо');
-    let t = 0;
-    const tick = () => { t++; const eng = t % 20 > 12; showStatus(eng ? 13.95 : 13.28 - (t % 7) * .01, eng ? 14.1 : .05, 21.4 + (t % 5) * .1, eng); };
-    tick(); demoTimer = setInterval(tick, 2000);
-  } else {
-    setConn('off', 'Подключить');
-    ['vbat', 'temp', 'vign'].forEach(id => $(id).textContent = '—'); $('vbatPct').textContent = 'нет данных';
-    $('arc').setAttribute('stroke-dasharray', '0 100');
-    $('lampEng').className = 'lamp'; $('lampChg').className = 'lamp';
-  }
-}
-
-$('connBtn').onclick = () => { if (demo) return; if ($('connBtn').dataset.s === 'on') return; connect(); };
-$('openBtn').onclick = () => send('o', 'Открыто');
-$('closeBtn').onclick = () => send('c', 'Закрыто');
-$('demoBtn').onclick = toggleDemo;
-document.addEventListener('visibilitychange', () => { if (!document.hidden && wantConnected && !cmdChar) { retryN = 0; scheduleRetry(); } });
-
-if (!navigator.bluetooth) $('noBt').hidden = false;
-renderLog();
-autoConnect();
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+async function attach(dev) { device=dev; device.removeEventListener('gattserverdisconnected',onDisconnect); device.addEventListener('gattserverdisconnected',onDisconnect); setConn('wait','Подключение…'); const server=await device.gatt.connect(); const svc=await server.getPrimaryService(SVC); cmdChar=await svc.getCharacteristic(CMD); staChar=await svc.getCharacteristic(STA); staChar.removeEventListener('characteristicvaluechanged',onStatus); staChar.addEventListener('characteristicvaluechanged',onStatus); await staChar.startNotifications(); try{onStatus(await staChar.readValue())}catch(e){} retryN=0;wantConnected=true;setConn('on','На связи'); $('stateSub').textContent=log.length?$('stateSub').textContent:'Замок готов к управлению'; }
+async function connect(){if(demo)return;if(!navigator.bluetooth){toast('Нужен Chrome на Android');return}try{const dev=await navigator.bluetooth.requestDevice({filters:[{services:[SVC]}]});await attach(dev)}catch(e){if(e.name==='NotFoundError'){setConn('off','Подключить');return}failed(e)}}
+function failed(e){console.warn(e);const msg=String(e&&e.message||e);if(/auth|encrypt|insufficient/i.test(msg))toast('Нажмите кнопку сопряжения на блоке');else toast('Не удалось подключиться: '+(e.name||'ошибка'));setConn('off','Подключить');scheduleRetry()}
+function onDisconnect(){cmdChar=staChar=null;$('stateMain').textContent='Связь потеряна';$('stateSub').textContent='Пробую подключиться снова';setConn('wait','Ищу Волгу…');scheduleRetry()}
+function scheduleRetry(){if(!wantConnected||!device||demo)return;clearTimeout(retryTimer);const wait=[2000,4000,8000,15000][Math.min(retryN,3)];retryN++;retryTimer=setTimeout(async()=>{if(document.hidden)return;try{await attach(device)}catch(e){setConn('wait','Ищу Волгу…');scheduleRetry()}},wait)}
+async function autoConnect(){if(!navigator.bluetooth||!navigator.bluetooth.getDevices)return;try{const list=await navigator.bluetooth.getDevices();const dev=list.find(d=>(d.name||'').startsWith('Volga'));if(!dev)return;wantConnected=true;device=dev;setConn('wait','Ищу Волгу…');try{await attach(dev)}catch(e){scheduleRetry()}}catch(e){}}
+async function send(ch,label){if(busy)return;const btn=ch==='o'?$('openBtn'):$('closeBtn');const verb=ch==='o'?'Открываю':'Закрываю';busy=true;$('openBtn').disabled=true;$('closeBtn').disabled=true;btn.classList.add('busy');btn.setAttribute('aria-busy','true');$('stateMain').textContent=verb+'…';$('stateSub').textContent='Отправляю защищённую BLE-команду';buzz(20);try{if(demo)await new Promise(r=>setTimeout(r,400));else await cmdChar.writeValueWithResponse(new TextEncoder().encode(ch));buzz([30,60,30]);addLog(label+' · команда отправлена');toast('Команда отправлена')}catch(e){$('stateMain').textContent='Команда не выполнена';$('stateSub').textContent='Проверьте связь с автомобилем';failed(e)}finally{setTimeout(()=>{busy=false;btn.classList.remove('busy');btn.removeAttribute('aria-busy');const on=$('connBtn').dataset.s==='on';$('openBtn').disabled=!on;$('closeBtn').disabled=!on},900)}}
+let demoTimer=null;function toggleDemo(){demo=!demo;$('demoBtn').textContent=demo?'Выключить демо':'Демо-режим';clearInterval(demoTimer);if(demo){setConn('on','Демо');let t=0;const tick=()=>{t++;const eng=t%20>12;showStatus(eng?13.95:13.28-(t%7)*.01,eng?14.1:.05,21.4+(t%5)*.1,eng)};tick();demoTimer=setInterval(tick,2000)}else{setConn('off','Подключить');['vbat','temp','vign'].forEach(id=>$(id).textContent='—');$('vbatPct').textContent='нет данных';$('arc').setAttribute('stroke-dasharray','0 100');$('lampEng').className='lamp';$('lampChg').className='lamp'}}
+$('connBtn').onclick=()=>{if(demo)return;if($('connBtn').dataset.s==='on')return;connect()};$('openBtn').onclick=()=>send('o','Открытие');$('closeBtn').onclick=()=>send('c','Закрытие');$('demoBtn').onclick=toggleDemo;document.addEventListener('visibilitychange',()=>{if(!document.hidden&&wantConnected&&!cmdChar){retryN=0;scheduleRetry()}});if(!navigator.bluetooth)$('noBt').hidden=false;renderLog();autoConnect();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>
