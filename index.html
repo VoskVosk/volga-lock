@@ -126,7 +126,15 @@ try { log = JSON.parse(localStorage.getItem('volga-log')) || []; } catch (e) {}
 const fmtTime = d => d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 const fmtDay = d => { const t = new Date(); return d.toDateString() === t.toDateString() ? 'сегодня' : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }); };
 function addLog(text) { log.unshift({ t: Date.now(), text }); log = log.slice(0, 15); try { localStorage.setItem('volga-log', JSON.stringify(log)); } catch (e) {} renderLog(); }
-function renderLog() { $('log').innerHTML = log.length ? log.map(e => { const d = new Date(e.t); return `<li><span>${e.text}</span><time>${fmtDay(d)} · ${fmtTime(d)}</time></li>`; }).join('') : '<li class="empty">Действий пока нет</li>'; if (log.length) { const d = new Date(log[0].t); $('stateMain').textContent = log[0].text; $('stateSub').textContent = `${fmtDay(d)} в ${fmtTime(d)}`; } }
+function renderLog() {
+  $('log').innerHTML = log.length ? log.map(e => { const d = new Date(e.t); return `<li><span>${e.text}</span><time>${fmtDay(d)} · ${fmtTime(d)}</time></li>`; }).join('') : '<li class="empty">Действий пока нет</li>';
+  if (log.length) {
+    const { text, t } = log[0];
+    const d = new Date(t);
+    $('stateMain').textContent = text.replace(/ · команда отправлена$/, '');
+    $('stateSub').textContent = `${fmtDay(d)} в ${fmtTime(d)}`;
+  }
+}
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2400); }
 const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
 function setConn(state, text) { $('connBtn').dataset.s = state; $('connText').textContent = text; $('connBtn').setAttribute('aria-label', text); $('connBtn').setAttribute('aria-busy', state === 'wait'); const on = state === 'on'; $('openBtn').disabled = !on || busy; $('closeBtn').disabled = !on || busy; }
